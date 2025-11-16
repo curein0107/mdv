@@ -80,18 +80,34 @@ def load_dictionaries_from_excel(xl_path: str) -> Tuple[
             # Skip rows with non‑numeric costs
             continue
 
-    # Build scale_to_weight: facility size (규모) to weight (가중치).
+    # Build scale_to_weight: facility size (규모) to weight.  The weights
+    # for the facility size categories are stored in the '가중치.1' column (not '가중치'),
+    # so use that column for extraction.  This ensures that all four size
+    # categories have numeric weights.
     scale_to_weight: Dict[str, float] = {}
-    if "규모" not in df.columns or "가중치" not in df.columns:
-        raise ValueError("Expected columns '규모' and '가중치' not found in Excel file")
-    size_df = df[["규모", "가중치"]].dropna()
-    # Filter to those rows where 가중치 is numeric (not header strings like '가중치')
+    if "규모" not in df.columns or "가중치.1" not in df.columns:
+        raise ValueError("Expected columns '규모' and '가중치.1' not found in Excel file")
+    size_df = df[["규모", "가중치.1"]].dropna()
     for size, weight in size_df.drop_duplicates(subset="규모").itertuples(index=False):
         try:
             weight_val = float(weight)
         except (ValueError, TypeError):
             continue
         scale_to_weight[str(size)] = weight_val
+
+    # Define known data type categories to separate them from facility sizes
+    data_type_categories = [
+        "정형",
+        "비정형_x-ray",
+        "비정형_시그널",
+        "비정형_음성",
+        "비정형_영상",
+        "비정형_유전체",
+    ]
+    # Remove data type categories from scale_to_weight if they were inadvertently included
+    for key in list(scale_to_weight.keys()):
+        if key in data_type_categories:
+            scale_to_weight.pop(key)
 
     # Build inst_to_cost: institution type (규모.1) to consultation cost (진찰료_판정료).
     inst_to_cost: Dict[str, float] = {}
@@ -262,7 +278,12 @@ def main() -> None:
     act_options = sorted(act_to_cost.keys())
     # Limit facility size options to the four specific categories requested
     allowed_sizes = ["의원_소상공인", "병원_소기업", "종합병원_중기업", "상급종합병원_대기업"]
-    size_options = [s for s in allowed_sizes if s in scale_to_weight]
+    # For consistency with the X‑ray tool and to satisfy the user's requirement,
+    # always offer exactly the four facility size categories, regardless of
+    # whether they are present in the loaded dictionary.  The weights will
+    # still be looked up in ``scale_to_weight`` when computing results, defaulting
+    # to 0.0 if a size is missing.
+    size_options = allowed_sizes
     inst_options = list(inst_to_cost.keys())
     disease_options = list(disease_to_weight.keys())
     # Fix data type to '정형' only
