@@ -266,7 +266,8 @@ def main() -> None:
     inst_options = list(inst_to_cost.keys())
     disease_options = list(disease_to_weight.keys())
     # Fix data type to '정형' only
-    data_type_options = ["정형"] if "정형" in data_type_to_weight else list(data_type_to_weight.keys())
+    # Fix data type to '정형' only regardless of dictionary contents
+    data_type_options = ["정형"]
 
     with st.form(key="calculator_form"):
         act = st.selectbox("의료행위 (정형) 선택", act_options, key="act")
