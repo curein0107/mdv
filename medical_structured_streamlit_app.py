@@ -125,32 +125,34 @@ def load_dictionaries_from_excel(xl_path: str) -> Tuple[
         if key in scale_to_weight:
             data_type_to_weight.pop(key)
 
-    # Build disease_to_scarcity: category (분류) to scarcity weight (희소가중치).
-    disease_to_scarcity: Dict[str, float] = {}
-    if "분류" not in df.columns or "희소가중치" not in df.columns:
-        raise ValueError("Expected columns '분류' and '희소가중치' not found in Excel file")
-    scarce_df = df[["분류", "희소가중치"]].dropna().drop_duplicates(subset="분류")
-    for cat, weight in scarce_df.itertuples(index=False):
+    # Build disease_to_weight: map each disease name to its scarcity weight.
+    disease_to_weight: Dict[str, float] = {}
+    # Ensure necessary columns are present
+    for col in ["질병", "희소가중치"]:
+        if col not in df.columns:
+            raise ValueError(f"Expected column '{col}' not found in Excel file")
+    disease_df = df[["질병", "희소가중치"]].dropna().drop_duplicates(subset="질병")
+    for disease, weight in disease_df.itertuples(index=False):
         try:
-            disease_to_scarcity[str(cat)] = float(weight)
+            disease_to_weight[str(disease)] = float(weight)
         except (ValueError, TypeError):
             continue
 
-    return act_to_cost, scale_to_weight, inst_to_cost, data_type_to_weight, disease_to_scarcity
+    return act_to_cost, scale_to_weight, inst_to_cost, data_type_to_weight, disease_to_weight
 
 
 def calculate_values(
     act: str,
     size: str,
     institution: str,
-    disease_cat: str,
+    disease: str,
     data_type: str,
     quality: str,
     act_to_cost: Dict[str, float],
     scale_to_weight: Dict[str, float],
     inst_to_cost: Dict[str, float],
     data_type_to_weight: Dict[str, float],
-    disease_to_scarcity: Dict[str, float],
+    disease_to_weight: Dict[str, float],
 ) -> Dict[str, float]:
     """Compute step‑wise costs and values for structured medical data.
 
@@ -202,9 +204,9 @@ def calculate_values(
     step3_cost = step2_cost + consult_cost * (1.0 + storage_weight)
     # Step 4: apply quality judgment.  Pass retains cost, Fail zeroes it out.
     step4_cost = step3_cost if quality == "Pass" else 0.0
-    # Step 5: apply scarcity weight
-    scarcity_weight = float(disease_to_scarcity.get(disease_cat, 0.0))
-    step5_cost = step4_cost * (1.0 + scarcity_weight)
+    # Step 5: apply disease scarcity weight
+    disease_weight = float(disease_to_weight.get(disease, 0.0))
+    step5_cost = step4_cost * (1.0 + disease_weight)
     # Step 6: apply effectiveness weight (use constant 0.2)
     effectiveness_weight = 0.2
     step6_cost = step5_cost * (1.0 + effectiveness_weight)
@@ -225,7 +227,7 @@ def calculate_values(
         "진찰료 (Step 3)": consult_cost,
         "저장 및 관리비 가중치 적용 후 비용 (Step 4)": step3_cost,
         "품질 평가 후 비용 (Step 5)": step4_cost,
-        "희소가중치 적용 후 비용 (Step 6)": step5_cost,
+        "질병 희소가중치 적용 후 비용 (Step 6)": step5_cost,
         "효과성 가중치 적용 후 비용 (Step 7)": step6_cost,
         "유통수수료 가중치 적용 후 비용 (Step 8)": step7_cost,
         "법정 세금 적용 후 최종 유통가치 (Step 9)": final_value,
@@ -244,7 +246,7 @@ def main() -> None:
             scale_to_weight,
             inst_to_cost,
             data_type_to_weight,
-            disease_to_scarcity,
+            disease_to_weight,
         ) = load_dictionaries_from_excel(EXCEL_FILE_PATH)
     except Exception as exc:
         st.error(f"데이터 사전을 로드하는 중 오류가 발생했습니다: {exc}")
@@ -260,14 +262,14 @@ def main() -> None:
     act_options = sorted(act_to_cost.keys())
     size_options = list(scale_to_weight.keys())
     inst_options = list(inst_to_cost.keys())
-    disease_options = list(disease_to_scarcity.keys())
+    disease_options = list(disease_to_weight.keys())
     data_type_options = list(data_type_to_weight.keys())
 
     with st.form(key="calculator_form"):
         act = st.selectbox("의료행위 선택", act_options, key="act")
         size = st.selectbox("의료기관 규모 선택", size_options, key="size")
         institution = st.selectbox("진찰료 기준 의료기관 유형 선택", inst_options, key="institution")
-        disease_cat = st.selectbox("질병 희소성 범주 선택", disease_options, key="disease_cat")
+        disease = st.selectbox("질병 선택", disease_options, key="disease")
         data_type = st.selectbox("데이터 관리 유형 선택", data_type_options, key="data_type")
         quality = st.selectbox("품질 판정", ["Pass", "Fail"], key="quality")
         submit = st.form_submit_button("계산하기")
@@ -277,14 +279,14 @@ def main() -> None:
             act,
             size,
             institution,
-            disease_cat,
+            disease,
             data_type,
             quality,
             act_to_cost,
             scale_to_weight,
             inst_to_cost,
             data_type_to_weight,
-            disease_to_scarcity,
+            disease_to_weight,
         )
         result_df = pd.DataFrame(
             {
