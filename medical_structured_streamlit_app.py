@@ -260,10 +260,13 @@ def main() -> None:
 
     # Prepare options for selection boxes.  Sort keys for consistency.
     act_options = sorted(act_to_cost.keys())
-    size_options = list(scale_to_weight.keys())
+    # Limit facility size options to the four specific categories requested
+    allowed_sizes = ["의원_소상공인", "병원_소기업", "종합병원_중기업", "상급종합병원_대기업"]
+    size_options = [s for s in allowed_sizes if s in scale_to_weight]
     inst_options = list(inst_to_cost.keys())
     disease_options = list(disease_to_weight.keys())
-    data_type_options = list(data_type_to_weight.keys())
+    # Fix data type to '정형' only
+    data_type_options = ["정형"] if "정형" in data_type_to_weight else list(data_type_to_weight.keys())
 
     with st.form(key="calculator_form"):
         act = st.selectbox("의료행위 (정형) 선택", act_options, key="act")
@@ -299,7 +302,7 @@ def main() -> None:
         st.subheader("계산 결과")
         st.table(result_df)
         # Optional footer similar to the X‑ray tool
-
+        st.caption("Created by curein")
 
 
 if __name__ == "__main__":

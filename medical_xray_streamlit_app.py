@@ -162,7 +162,11 @@ def main() -> None:
     size_options = list(scale_to_weight.keys())
     inst_options = list(inst_to_cost.keys())
     disease_options = sorted(disease_to_scarcity.keys())
-    data_type_options = list(data_type_to_weight.keys())
+    # Restrict data type options to '비정형_x-ray' only as per new requirement
+    if "비정형_x-ray" in data_type_to_weight:
+        data_type_options = ["비정형_x-ray"]
+    else:
+        data_type_options = list(data_type_to_weight.keys())
 
     with st.form(key="calculator_form"):
         act = st.selectbox("의료행위 (X-Ray) 선택", act_options, key="act")
