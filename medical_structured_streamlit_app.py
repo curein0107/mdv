@@ -252,10 +252,10 @@ def main() -> None:
         st.error(f"데이터 사전을 로드하는 중 오류가 발생했습니다: {exc}")
         st.stop()
 
-    st.title("정형 의료 데이터 가치 계산기 (Streamlit)")
+    # Main page title and description styled similarly to the X‑ray valuation tool
+    st.title("정형 의료 데이터 ‒ 진단검사 데이터 가치 계산기")
     st.write(
-        "이 도구는 정형 데이터 가치 평가 계산기를 Streamlit으로 구현한 것입니다."
-        " 아래의 옵션을 선택한 후 `계산하기` 버튼을 눌러 단계별 비용과 가치를 확인하세요."
+        "아래의 옵션을 선택한 후 계산하기 버튼을 눌러 단계별 비용과 가치를 확인하세요."
     )
 
     # Prepare options for selection boxes.  Sort keys for consistency.
@@ -266,7 +266,7 @@ def main() -> None:
     data_type_options = list(data_type_to_weight.keys())
 
     with st.form(key="calculator_form"):
-        act = st.selectbox("의료행위 선택", act_options, key="act")
+        act = st.selectbox("의료행위 (정형) 선택", act_options, key="act")
         size = st.selectbox("의료기관 규모 선택", size_options, key="size")
         institution = st.selectbox("진찰료 기준 의료기관 유형 선택", inst_options, key="institution")
         disease = st.selectbox("질병 선택", disease_options, key="disease")
@@ -294,8 +294,12 @@ def main() -> None:
                 "값 (원)": [f"{value:,.2f}" for value in results.values()],
             }
         )
+        # Ensure the index starts at 0 for visual consistency with the X‑ray tool
+        result_df.index = range(len(result_df))
         st.subheader("계산 결과")
         st.table(result_df)
+        # Optional footer similar to the X‑ray tool
+        st.caption("Created by curein")
 
 
 if __name__ == "__main__":
