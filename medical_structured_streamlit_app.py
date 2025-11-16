@@ -299,7 +299,7 @@ def main() -> None:
         st.subheader("계산 결과")
         st.table(result_df)
         # Optional footer similar to the X‑ray tool
-        st.caption("Created by curein")
+
 
 
 if __name__ == "__main__":
