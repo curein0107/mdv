@@ -269,7 +269,7 @@ def main() -> None:
         st.stop()
 
     # Main page title and description styled similarly to the X‑ray valuation tool
-    st.title("정형 의료 데이터 ‒ 진단검사 데이터 가치 계산기")
+    st.title("정형 의료 데이터 가치 계산기")
     st.write(
         "아래의 옵션을 선택한 후 계산하기 버튼을 눌러 단계별 비용과 가치를 확인하세요."
     )
